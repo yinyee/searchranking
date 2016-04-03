@@ -3,7 +3,7 @@ package ranking;
 public class Term {
 	
 	private Object id;
-	private Integer frequency;
+	private int frequency;
 	
 	public Term(Object id, int frequency) {
 		this.id = id;
@@ -14,7 +14,7 @@ public class Term {
 		return id;
 	}
 	
-	public Integer getFrequency() {
+	public int getFrequency() {
 		return frequency;
 	}
 

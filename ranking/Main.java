@@ -13,97 +13,135 @@ public class Main {
 	
 	public static void main (String[] args) {
 		
-		// DOCUMENT OBJECT
-		// String docNo
-		// long sumOfTermFrequency (aka length of document)
-		// ArrayList<term, term frequency>
-		// ArrayList<topicID, bm25score, bm25rank, ndcgscore, mmrscore>
-		
 		// PRE-PROCESS DOCUMENTS
-		// create a Dictionary called DocumentCollection
-		// read document term vectors file
-		// for each line,
-		//		create an ArrayList<term, term frequency>
-		//		create a Document object
-		//		add key = docNo and value = Document object
-		
 		Hashtable<String, Document> documentCollection = new Hashtable<String, Document>();
 		
-		try {			
-			BufferedReader reader = new BufferedReader(new FileReader("../data/document_term_vectors.dat"));
+		try {
+			
+			String path = Main.class.getClassLoader().getResource("data/").getPath();
+			BufferedReader reader = new BufferedReader(new FileReader(path + "document_term_vectors.dat"));
 			
 			String line;
+			
 			Document doc;
 			String docNo;
 			long docLength;
-			double totalDocLength = 0;
-			int totalDocCount = 0;
+			
+			Hashtable<Integer, Term> terms = new Hashtable<Integer, Term>();
 			Term term;
+			String sTermID, sTermFrequency;
 			int termID, termFrequency;
-			Hashtable<Integer,Term> terms = new Hashtable<Integer, Term>();
 			
 			while ((line = reader.readLine()) != null) {
+				
 				StringTokenizer tokeniser = new StringTokenizer(line);
-				docNo = tokeniser.nextToken();
+				
+				docNo = tokeniser.nextToken(" :");
+//				System.out.println(docNo);
 				docLength = 0;
+				
 				while (tokeniser.hasMoreTokens()) {
-					termID = Integer.parseInt(tokeniser.nextToken("\\s"));
-					termFrequency = Integer.parseInt(tokeniser.nextToken(":"));
-					docLength += termFrequency;
+					
+					sTermID = tokeniser.nextToken();
+					sTermID = sTermID.trim();
+					termID = Integer.parseInt(sTermID);
+					
+					sTermFrequency = tokeniser.nextToken();
+					sTermFrequency = sTermFrequency.trim();
+					termFrequency = Integer.parseInt(sTermFrequency);
+					
+					docLength += Integer.parseInt(sTermFrequency);
+					
+//					System.out.println(termID);
+//					System.out.println(termFrequency);
+//					System.out.println("docLength = " + docLength);
+					
 					term = new Term(termID, termFrequency);
-					terms.put(termID, term);	
+					terms.put(termID, term);
+					
 				}
+				
 				doc = new Document(docNo, docLength, terms);
 				documentCollection.put(docNo, doc);	
-				totalDocLength += docLength;
-				totalDocCount += 1;
+				
 			}
-			averageDocLength = totalDocLength / totalDocCount;
+			
+			
+//			System.out.println(totalDocLength);
+			
 			reader.close();
+			
 		} catch (IOException e) {
+			
 			e.printStackTrace();
+			
 		}
 		
-		// PRE-PROCESS QUERIES
-		// create a Dictionary called QueryCollection
-		// read query term vectors file
-		// for each line, add key = topicID and value = ArrayList<term, term frequency>
+//		System.out.println(documentCollection.size());
 		
+		// PRE-PROCESS QUERIES
 		Hashtable<Integer, Topic> topicCollection = new Hashtable<Integer, Topic>();
 		
 		try {
-			BufferedReader reader = new BufferedReader(new FileReader("../data/query_term_vectors.dat"));
+			
+			String path = Main.class.getClassLoader().getResource("data/").getPath();
+			BufferedReader reader = new BufferedReader(new FileReader(path + "query_term_vectors.dat"));
 			
 			String line;
-			Topic query;
-			int topicID;
+			
 			ArrayList<Term> terms = new ArrayList<Term>();
+			Topic query;
 			Term term;
-			int termID;
+			String sTopicID, sTermID;
+			int topicID, termID;
 			
 			while ((line = reader.readLine()) != null) {
+				
 				StringTokenizer tokeniser = new StringTokenizer(line);
-				topicID = Integer.parseInt(tokeniser.nextToken());
+				
+				sTopicID = tokeniser.nextToken(" :");
+				sTopicID = sTopicID.trim();
+				topicID = Integer.parseInt(sTopicID);
+				
+//				System.out.println(topicID);
+				
 				while (tokeniser.hasMoreTokens()) {
-					termID = Integer.parseInt(tokeniser.nextToken("\\s"));
+					
+					sTermID = tokeniser.nextToken();
+					sTermID = sTermID.trim();
+					termID = Integer.parseInt(sTermID);
+					
+//					System.out.println(termID);
+					
+					tokeniser.nextToken();			// Discard the term frequency for queries
+					
 					term = new Term(termID, 1);
 					terms.add(term);
+					
 				}
+				
 				query = new Topic(topicID, terms);
 				topicCollection.put(topicID, query);
+				
 			}
 			
 			reader.close();
+			
 		} catch (IOException e) {
+			
 			e.printStackTrace();
+			
 		}
+		
+//		System.out.println(topicCollection.size());
 		
 		// CREATE INVERTED INDEX
 		InvertedIndex index = InvertedIndex.getInstance(documentCollection, topicCollection);
+//		System.out.println(index.size());
 		
 		// CALCULATE BM25 SCORES
-		
-		 
+		BM25Model bm25model = BM25Model.getInstance(index, topicCollection, documentCollection);
+		bm25model.printResults();
 		
 		
 		// PRE-PROCESS RELEVANCE JUDGEMENTS

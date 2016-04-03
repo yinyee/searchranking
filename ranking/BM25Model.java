@@ -7,33 +7,6 @@ import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.Map.Entry;
 
-/**
- * Input format for document term vectors:
- * 		docID	termID:termFrequency [termID:termFrequemcy]
- * 
- * Input format for query term vectors:
- * 		topicID	termID:termFrequency [termID:termFrequency]
- * 
- * Calculate:
- * 		docScore(D,Q) = sum_{i=1}^{n} IDF(qi) x frac {{ TF_qi=(termFrequency of termID=qi in docID=D) x (1 + k) } / { TF_qi + k x (1 - b + b x numberOfWordsInDoc(D) / averageDocLength)
- * where
- * 		b = 0.75 and k = 1.5
- * and where
- * 		IDF(qi) = log ( frac { N - n(qi) + 0.5 } / { n(qi) + 0.5 } )
- * and where
- * 		N = total number of documents in the collection
- * 		n(qi) = number of documents containing qi
- * and where
- * 		docRank = from 0 to N
- * 
- * Output format:
- * 		topicID	q0	docID	docRank	docScore	bm25
- * where q0 and bm25 are constants
- * 
- * @author yinyee
- *
- */
-
 @SuppressWarnings("serial")
 public class BM25Model extends Hashtable<Integer, Results> {
 	
@@ -46,7 +19,7 @@ public class BM25Model extends Hashtable<Integer, Results> {
 	private static final String q0 = "Q0";
 	private static final String bm25 = "BM25b0.75";
 	
-	public BM25Model(InvertedIndex index, Hashtable<Integer, Topic> topicCollection, Hashtable<String, Document> documentCollection, int totalDocCount, float averageDocLength) {
+	public BM25Model(InvertedIndex index, Hashtable<Integer, Topic> topicCollection, Hashtable<String, Document> documentCollection) {
 		
 		Hashtable<Document, Float> unsorted = new Hashtable<Document, Float>();
 		
@@ -67,22 +40,40 @@ public class BM25Model extends Hashtable<Integer, Results> {
 		long docLength;
 		int docFrequency, docTermFrequency;
 		
+		// Get document collection metrics
+		int totalDocCount = documentCollection.size();
+		long totalDocLength = 0;
+		
+		while (itrDocuments.hasNext()) {
+			totalDocLength += itrDocuments.next().getValue().getDocLength();
+		}
+		
+		float averageDocLength = totalDocLength / totalDocCount;
+		
+//		System.out.println("length of all documents combined: " + totalDocLength);	// 6,480,612
+//		System.out.println("average length of document: " + averageDocLength);		// 1,365
+		
 		// While there are more topics in the topic collection
 		while (itrTopics.hasNext()) {								
 			
 			topic = itrTopics.next().getValue();
 			topic.getTerms();
 			
+			itrDocuments = documentCollection.entrySet().iterator();
 			itrQueryTerms = topic.getTerms().iterator();
 			
 			// For every document in the collection
 			while (itrDocuments.hasNext()) {						
 				
+				System.out.println("Inside document loop");
+				
 				document = itrDocuments.next().getValue();
 				score = 0;											// Reset score for new document to zero
 				
 				// Where there are more query terms in this topic
-				while (itrQueryTerms.hasNext()) {					
+				while (itrQueryTerms.hasNext()) {		
+					
+					System.out.println("Inside query terms loop");
 					
 					item = index.get(itrQueryTerms.next().getID());	// Retrieve the index item associated with this query term
 					
@@ -112,9 +103,13 @@ public class BM25Model extends Hashtable<Integer, Results> {
 				document.getScores().put(topic.getTopicID(), bm25score);
 				unsorted.put(document, score);
 				
+				System.out.println(topic.getTopicID() + " " + document.getDocNo() + ": " + score);
+				
 			} // Finished processing all documents for this topic
 			
 			ArrayList<Entry<Document, Float>> result = new ArrayList<Entry<Document, Float>>(unsorted.entrySet());
+			
+			System.out.println("empty?" + result.isEmpty());
 			
 			// Sort the scores in descending order
 			Collections.sort(result, new Comparator<Entry<Document, Float>>() {
@@ -131,12 +126,14 @@ public class BM25Model extends Hashtable<Integer, Results> {
 			
 		} // No more topics to process
 		
+		System.out.println(results.size());
+		
 	}
 
-	public static BM25Model getInstance(InvertedIndex index, Hashtable<Integer, Topic> topicCollection, Hashtable<String, Document> documentCollection, int totalDocCount, float averageDocLength) {
+	public static BM25Model getInstance(InvertedIndex index, Hashtable<Integer, Topic> topicCollection, Hashtable<String, Document> documentCollection) {
 		
 		if (instance == null)
-			instance = new BM25Model(index, topicCollection, documentCollection, totalDocCount, averageDocLength);
+			instance = new BM25Model(index, topicCollection, documentCollection);
 		
 		return instance;
 		
@@ -176,6 +173,7 @@ public class BM25Model extends Hashtable<Integer, Results> {
 				str.append(BM25Model.bm25);
 			}
 			
+			System.out.println(str.toString());
 			
 		}
 		
