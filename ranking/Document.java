@@ -13,6 +13,10 @@ public class Document {
 		return docNo;
 	}
 	
+	public long getDocLength() {
+		return docLength;
+	}
+	
 	public Document(String docNo, long docLength, Hashtable<Integer, Term> terms) {
 		this.docNo = docNo;
 		this.docLength = docLength;
@@ -21,6 +25,10 @@ public class Document {
 	
 	public Hashtable<Integer, Term> getTerms() {
 		return terms;
+	}
+	
+	public Hashtable<Integer, Score> getScores() {
+		return scores;
 	}
 
 }

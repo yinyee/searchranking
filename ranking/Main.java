@@ -4,14 +4,12 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Hashtable;
-import java.util.Iterator;
-import java.util.Map.Entry;
-import java.util.Set;
 import java.util.StringTokenizer;
 
 public class Main {
+	
+	static double averageDocLength;
 	
 	public static void main (String[] args) {
 		
@@ -38,6 +36,8 @@ public class Main {
 			Document doc;
 			String docNo;
 			long docLength;
+			double totalDocLength = 0;
+			int totalDocCount = 0;
 			Term term;
 			int termID, termFrequency;
 			Hashtable<Integer,Term> terms = new Hashtable<Integer, Term>();
@@ -55,25 +55,27 @@ public class Main {
 				}
 				doc = new Document(docNo, docLength, terms);
 				documentCollection.put(docNo, doc);	
+				totalDocLength += docLength;
+				totalDocCount += 1;
 			}
-			
+			averageDocLength = totalDocLength / totalDocCount;
 			reader.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-				
+		
 		// PRE-PROCESS QUERIES
 		// create a Dictionary called QueryCollection
 		// read query term vectors file
 		// for each line, add key = topicID and value = ArrayList<term, term frequency>
 		
-		Hashtable<Integer, Query> queryCollection = new Hashtable<Integer, Query>();
+		Hashtable<Integer, Topic> topicCollection = new Hashtable<Integer, Topic>();
 		
 		try {
 			BufferedReader reader = new BufferedReader(new FileReader("../data/query_term_vectors.dat"));
 			
 			String line;
-			Query query;
+			Topic query;
 			int topicID;
 			ArrayList<Term> terms = new ArrayList<Term>();
 			Term term;
@@ -87,8 +89,8 @@ public class Main {
 					term = new Term(termID, 1);
 					terms.add(term);
 				}
-				query = new Query(topicID, terms);
-				queryCollection.put(topicID, query);
+				query = new Topic(topicID, terms);
+				topicCollection.put(topicID, query);
 			}
 			
 			reader.close();
@@ -97,84 +99,12 @@ public class Main {
 		}
 		
 		// CREATE INVERTED INDEX
-		// create a Dictionary called InvertedIndex
-		// iterate over QueryCollection
-		// for each unique term, add key = term, value = null
-		// iterate over DocumentCollection
-		// for each document, if (term exists in document && term exists in QueryCollection) add value = <docNo, Document object> to key = term
-		
-		Hashtable<Integer, IndexItem> invertedIndex = new Hashtable<Integer, IndexItem>();
-		
-		Set<Entry<Integer, Query>> queries = queryCollection.entrySet();
-		Iterator<Entry<Integer, Query>> itrQueries = queries.iterator();
-		int termID;
-		ArrayList<Term> queryTerms;
-		IndexItem item;
-		int docFrequency = 0;
-		HashMap<String, DocTermFrequency> docTermFrequencies = new HashMap<String, DocTermFrequency>();
-		
-		while (itrQueries.hasNext()) {
-			queryTerms = itrQueries.next().getValue().getTerms();
-			Iterator<Term> itrTerms = queryTerms.iterator();
-			while (itrTerms.hasNext()) {
-				termID = itrTerms.next().getID();
-				if (!(invertedIndex.containsKey(termID))) {
-					item = new IndexItem(docFrequency, docTermFrequencies);
-					invertedIndex.put(termID, item);
-				}
-			}
-		}
-		
-		Set<Entry<String, Document>> documents = documentCollection.entrySet();
-		Iterator<Entry<String, Document>> itrDocuments = documents.iterator();
-		Document document;
-		Set<Entry<Integer, Term>> docTerms;
-		HashMap<String, DocTermFrequency> docs;
-		String docNo;
-		Term term;
-		Entry<Integer, Term> entry;
-		int termFrequency;
-		DocTermFrequency docTerm;
-		
-		while (itrDocuments.hasNext()) {
-			document = itrDocuments.next().getValue();			// Get next document from documentCollection
-			docTerms = document.getTerms().entrySet();			// Get list of words found in document
-			Iterator<Entry<Integer, Term>> itrTerms = docTerms.iterator();
-			while (itrTerms.hasNext()) {
-				entry = itrTerms.next();						// Get next word from list of words
-				termID = entry.getKey();
-				if (invertedIndex.containsValue(termID)) {		// If word is found in queryCollection
-					item = invertedIndex.get(termID);			// Get associated index item
-					docFrequency = item.getDocFrequency() + 1;	// Increment document frequency
-					item.setDocFrequency(docFrequency);
-					docs = item.getDocList();
-					docNo = document.getDocNo();
-					termFrequency = entry.getValue().getFrequency();
-					docTerm = new DocTermFrequency(docNo, termFrequency);
-					docs.put(docNo, docTerm);					// Add new entry consisting of (docNo, term frequency in document)
-				}
-			}
-		}
+		InvertedIndex index = InvertedIndex.getInstance(documentCollection, topicCollection);
 		
 		// CALCULATE BM25 SCORES
-		// create a Dictionary called BM25 with key = topicID and value = null
-		// for each topicID from QueryCollection, create a Dictionary called Unsorted
-		// set constants k and b
-		// calculate the average length of documents in DocumentCollection
-		// for each topicID,
-		// 		using InvertedIndex, calculate the inverse document frequency of terms in the query
-		//		from the InvertedIndex, retrieve list of documents which contain the query terms
-		//		for each retrieved document,
-		//				retrieve the length of the document
-		//				retrieve the frequency of the term
-		//				compute bm25score and add to Document object
-		//				add key = bm25score and value = Document object to Unsorted
-		// create a Dictionary called BM25Results for each topicID
-		// get keys for Unsorted
-		// 		find max
-		//		update Document.rank
-		//		add to BM25Results with key = rank and value = Document object
-		// add value = BM25Results to BM25
+		
+		 
+		
 		
 		// PRE-PROCESS RELEVANCE JUDGEMENTS
 		// read qrels adhoc file

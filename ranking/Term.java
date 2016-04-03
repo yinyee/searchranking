@@ -2,18 +2,19 @@ package ranking;
 
 public class Term {
 	
-	private int id, frequency;
+	private Object id;
+	private Integer frequency;
 	
-	public Term(int id, int frequency) {
+	public Term(Object id, int frequency) {
 		this.id = id;
 		this.frequency = frequency;
 	}
 	
-	public int getID() {
+	public Object getID() {
 		return id;
 	}
 	
-	public int getFrequency() {
+	public Integer getFrequency() {
 		return frequency;
 	}
 

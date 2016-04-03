@@ -5,6 +5,10 @@ public class Score {
 	private int rank_bm25, rank_mmr, rank_pd;
 	private float score_bm25, score_mmr, score_pd;
 	
+	public Score() {
+		
+	}
+	
 	public void setRankBM25(int rank) {
 		this.rank_bm25 = rank;
 	}
@@ -17,15 +21,15 @@ public class Score {
 		this.rank_pd = rank;
 	}
 	
-	public void setScoreBM25(int score) {
+	public void setScoreBM25(float score) {
 		this.score_bm25 = score;
 	}
 	
-	public void setScoreMMR(int score) {
+	public void setScoreMMR(float score) {
 		this.score_mmr = score;
 	}
 
-	public void setScorePD(int score) {
+	public void setScorePD(float score) {
 		this.score_pd = score;
 	}
 	
