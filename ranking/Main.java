@@ -5,6 +5,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Hashtable;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.StringTokenizer;
 
 public class Main {
@@ -27,8 +29,8 @@ public class Main {
 			String docNo;
 			long docLength;
 			
-			Hashtable<Integer, Term> terms = new Hashtable<Integer, Term>();
-			Term term;
+			Hashtable<Integer, Word> words;
+			Word word;
 			String sTermID, sTermFrequency;
 			int termID, termFrequency;
 			
@@ -37,7 +39,9 @@ public class Main {
 				StringTokenizer tokeniser = new StringTokenizer(line);
 				
 				docNo = tokeniser.nextToken(" :");
+				docNo = docNo.trim();
 //				System.out.println(docNo);
+				words = new Hashtable<Integer, Word>();
 				docLength = 0;
 				
 				while (tokeniser.hasMoreTokens()) {
@@ -52,22 +56,19 @@ public class Main {
 					
 					docLength += Integer.parseInt(sTermFrequency);
 					
-//					System.out.println(termID);
-//					System.out.println(termFrequency);
+//					System.out.println("termID: " + termID);
+//					System.out.println("termFrequency: " + termFrequency);
 //					System.out.println("docLength = " + docLength);
 					
-					term = new Term(termID, termFrequency);
-					terms.put(termID, term);
+					word = new Word(termID, termFrequency);
+					words.put(termID, word);
 					
 				}
 				
-				doc = new Document(docNo, docLength, terms);
+				doc = new Document(docNo, docLength, words);
 				documentCollection.put(docNo, doc);	
 				
 			}
-			
-			
-//			System.out.println(totalDocLength);
 			
 			reader.close();
 			
@@ -76,6 +77,13 @@ public class Main {
 			e.printStackTrace();
 			
 		}
+		
+//		Document test = documentCollection.get("clueweb12-0905wb-50-14578");
+//		System.out.println(test.getDocNo());
+//		System.out.println("length: " + test.getDocLength());
+//		System.out.println("id: " + test.getWords().get(448).getID());
+//		System.out.println("freq: " + test.getWords().get(448).getFrequency());
+//		System.out.println("freq: " + test.getWords().get(2).getFrequency());
 		
 //		System.out.println(documentCollection.size());
 		
@@ -89,38 +97,34 @@ public class Main {
 			
 			String line;
 			
-			ArrayList<Term> terms = new ArrayList<Term>();
-			Topic query;
-			Term term;
-			String sTopicID, sTermID;
-			int topicID, termID;
-			
 			while ((line = reader.readLine()) != null) {
 				
 				StringTokenizer tokeniser = new StringTokenizer(line);
 				
-				sTopicID = tokeniser.nextToken(" :");
+				String sTopicID = tokeniser.nextToken(" :");
 				sTopicID = sTopicID.trim();
-				topicID = Integer.parseInt(sTopicID);
+				int topicID = Integer.parseInt(sTopicID);
+				
+				ArrayList<Word> words = new ArrayList<Word>();
 				
 //				System.out.println(topicID);
 				
 				while (tokeniser.hasMoreTokens()) {
 					
-					sTermID = tokeniser.nextToken();
+					String sTermID = tokeniser.nextToken();
 					sTermID = sTermID.trim();
-					termID = Integer.parseInt(sTermID);
+					int termID = Integer.parseInt(sTermID);
 					
 //					System.out.println(termID);
 					
 					tokeniser.nextToken();			// Discard the term frequency for queries
 					
-					term = new Term(termID, 1);
-					terms.add(term);
+					Word word = new Word(termID, 1);
+					words.add(word);
 					
 				}
 				
-				query = new Topic(topicID, terms);
+				Topic query = new Topic(topicID, words);
 				topicCollection.put(topicID, query);
 				
 			}
@@ -137,11 +141,24 @@ public class Main {
 		
 		// CREATE INVERTED INDEX
 		InvertedIndex index = InvertedIndex.getInstance(documentCollection, topicCollection);
+		
+//		Iterator<String> itr = index.get(503).getDocList().keySet().iterator();
+//		while (itr.hasNext()) {
+//			System.out.println(itr.next());
+//		}
+		
+		
 //		System.out.println(index.size());
 		
 		// CALCULATE BM25 SCORES
 		BM25Model bm25model = BM25Model.getInstance(index, topicCollection, documentCollection);
-		bm25model.printResults();
+		
+		try {
+			bm25model.printResults();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
 		
 		
 		// PRE-PROCESS RELEVANCE JUDGEMENTS

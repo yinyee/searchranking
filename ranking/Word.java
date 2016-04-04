@@ -1,21 +1,20 @@
 package ranking;
 
-public class Term {
+public class Word {
 	
-	private Object id;
-	private int frequency;
+	private int id, frequency;
 	
-	public Term(Object id, int frequency) {
+	public Word(int id, int frequency) {
 		this.id = id;
 		this.frequency = frequency;
 	}
 	
-	public Object getID() {
+	public int getID() {
 		return id;
 	}
 	
 	public int getFrequency() {
 		return frequency;
 	}
-
+	
 }

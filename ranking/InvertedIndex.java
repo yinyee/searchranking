@@ -11,69 +11,10 @@ public class InvertedIndex extends Hashtable<Integer, IndexItem> {
 	
 	public InvertedIndex(Hashtable<String, Document> documentCollection, Hashtable<Integer, Topic> topicCollection) {
 		
-		Iterator<Entry<Integer, Topic>> itrTopics = topicCollection.entrySet().iterator();
-		Hashtable<String, Term> docTermFrequencies = new Hashtable<String, Term>();
-		IndexItem item;
-		int termID;
-		int docFrequency = 0;
+		this.getLexicon(topicCollection);
+		this.buildIndex(documentCollection);
+		this.calculateIDF(documentCollection);
 		
-		// Iterate through queryCollection; only unique terms will remain after this loop has finished running
-		while (itrTopics.hasNext()) {
-			
-			Iterator<Term> itrTerms = itrTopics.next().getValue().getTerms().iterator();
-			
-			while (itrTerms.hasNext()) {
-				
-				termID = (int) itrTerms.next().getID();
-				item = new IndexItem(termID, docFrequency, docTermFrequencies);
-				this.put(termID, item);
-				
-			}
-			
-		}
-		
-		Hashtable<String, Term> docs;
-		Document document;
-		String docNo;
-		Term docTerm;
-		
-		Entry<Integer, Term> entry;
-		int termFrequency;
-		
-		// Iterate through documentCollection and match docNo and termFrequency to index key
-		Iterator<Entry<String, Document>> itrDocuments = documentCollection.entrySet().iterator();
-		int i = 0;
-		while (itrDocuments.hasNext()) {
-			
-			document = itrDocuments.next().getValue();
-//			System.out.println(i++ + ": " + document.getDocNo() + " " + document.getDocLength());
-			
-			Iterator<Entry<Integer, Term>> itrTerms = document.getTerms().entrySet().iterator();
-			
-			while (itrTerms.hasNext()) {
-				
-				entry = itrTerms.next();						// Get next word from list of words
-				termID = entry.getKey();
-				
-				if (this.containsValue(termID)) {				// If word is found in queryCollection
-					
-					item = this.get(termID);					// Get associated index item
-					
-					docFrequency = item.getDocFrequency() + 1;	// Increment document frequency
-					item.setDocFrequency(docFrequency);
-					
-					docNo = document.getDocNo();
-					termFrequency = entry.getValue().getFrequency();
-					
-					docTerm = new Term(docNo, termFrequency);
-					
-					docs = item.getDocList();
-					docs.put(docNo, docTerm);					// Add new entry consisting of (docNo, term frequency in document)
-				
-				}
-			}
-		}
-
 	}
 
 	public static InvertedIndex getInstance(Hashtable<String, Document> documentCollection, Hashtable<Integer, Topic> topicCollection) {
@@ -82,6 +23,81 @@ public class InvertedIndex extends Hashtable<Integer, IndexItem> {
 			instance = new InvertedIndex(documentCollection, topicCollection);
 		
 		return instance;
-	}		
+	}
+	
+	private void getLexicon(Hashtable<Integer, Topic> topicCollection) {
+		
+		Iterator<Entry<Integer, Topic>> itrTopics = topicCollection.entrySet().iterator();
+		
+		while (itrTopics.hasNext()) {					// Only unique terms will remain after this loop has finished running
+			
+			Iterator<Word> itrWords = itrTopics.next().getValue().getTerms().iterator();
+			
+			while (itrWords.hasNext()) {				// While there are more words in this topic
+				
+				int wordID = itrWords.next().getID();
+				Hashtable<String, Find> docs = new Hashtable<String, Find>();
+				
+				IndexItem item = new IndexItem(wordID, 0, docs);
+				this.put(wordID, item);
+				
+			}
+		}
+	}
+	
+	private void buildIndex(Hashtable<String, Document> documentCollection) {
+		
+		Iterator<Entry<String, Document>> itrDocuments = documentCollection.entrySet().iterator();
+
+		while (itrDocuments.hasNext()) {						
+			
+			Document document = itrDocuments.next().getValue();
+			String docNo = document.getDocNo();
+			
+			Iterator<Entry<Integer, Word>> itrWords = document.getWords().entrySet().iterator();
+			
+			while (itrWords.hasNext()) {
+				
+				Entry<Integer, Word> entry = itrWords.next();						// Get next word from list of words
+				int wordID = entry.getKey();
+				
+				if (this.containsKey(wordID)) {										// If word is found in topicCollection
+					
+					IndexItem item = this.get(wordID);								// Get associated index item
+					
+					int docFrequency = item.getDocFrequency() + 1;					// Increment document frequency
+					item.setDocFrequency(docFrequency);
+					
+					int wordFrequency = entry.getValue().getFrequency();
+					
+					Find find = new Find (docNo, wordFrequency);
+					
+					Hashtable<String, Find> docs = item.getDocList();
+					
+					docs.put(docNo, find);									
+				
+				}
+			}
+		}
+	}
+	
+	private void calculateIDF(Hashtable<String, Document> documentCollection) {
+		
+		int numberOfDocuments = documentCollection.size();
+		
+		Iterator<Entry<Integer, IndexItem>> itrItems = this.entrySet().iterator();
+		
+		while (itrItems.hasNext()) {
+			
+			IndexItem item = itrItems.next().getValue();
+			int docFrequency = item.getDocFrequency();
+			double numerator = numberOfDocuments - docFrequency + 0.5;
+			double denominator = docFrequency + 0.5;
+			double idf = Math.log(numerator/denominator);
+			item.setIDF(idf);
+			
+		}
+		
+	}
 	
 }

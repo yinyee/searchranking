@@ -1,5 +1,8 @@
 package ranking;
 
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -8,9 +11,8 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 
 @SuppressWarnings("serial")
-public class BM25Model extends Hashtable<Integer, Results> {
+public class BM25Model extends Hashtable<Integer, ArrayList<Entry<Document, Double>>> {
 	
-	private static Hashtable<Integer, ArrayList<Entry<Document, Float>>> results = new Hashtable<Integer, ArrayList<Entry<Document, Float>>>();
 	private static BM25Model instance = null;
 	
 	private static final float b = 0.75f;
@@ -19,114 +21,13 @@ public class BM25Model extends Hashtable<Integer, Results> {
 	private static final String q0 = "Q0";
 	private static final String bm25 = "BM25b0.75";
 	
+	private int totalDocCount;
+	private float averageDocLength;
+	
 	public BM25Model(InvertedIndex index, Hashtable<Integer, Topic> topicCollection, Hashtable<String, Document> documentCollection) {
 		
-		Hashtable<Document, Float> unsorted = new Hashtable<Document, Float>();
-		
-		Iterator<Entry<Integer, Topic>> itrTopics = topicCollection.entrySet().iterator();
-		Iterator<Entry<String, Document>> itrDocuments = documentCollection.entrySet().iterator();
-		
-		Hashtable<String, Term> docList;
-		Iterator<Term> itrQueryTerms;
-		
-		Document document;
-		IndexItem item;
-		Score bm25score;
-		Topic topic;
-		Term term;
-		
-		double idf;
-		float score, numerator, denominator;
-		long docLength;
-		int docFrequency, docTermFrequency;
-		
-		// Get document collection metrics
-		int totalDocCount = documentCollection.size();
-		long totalDocLength = 0;
-		
-		while (itrDocuments.hasNext()) {
-			totalDocLength += itrDocuments.next().getValue().getDocLength();
-		}
-		
-		float averageDocLength = totalDocLength / totalDocCount;
-		
-//		System.out.println("length of all documents combined: " + totalDocLength);	// 6,480,612
-//		System.out.println("average length of document: " + averageDocLength);		// 1,365
-		
-		// While there are more topics in the topic collection
-		while (itrTopics.hasNext()) {								
-			
-			topic = itrTopics.next().getValue();
-			topic.getTerms();
-			
-			itrDocuments = documentCollection.entrySet().iterator();
-			itrQueryTerms = topic.getTerms().iterator();
-			
-			// For every document in the collection
-			while (itrDocuments.hasNext()) {						
-				
-				System.out.println("Inside document loop");
-				
-				document = itrDocuments.next().getValue();
-				score = 0;											// Reset score for new document to zero
-				
-				// Where there are more query terms in this topic
-				while (itrQueryTerms.hasNext()) {		
-					
-					System.out.println("Inside query terms loop");
-					
-					item = index.get(itrQueryTerms.next().getID());	// Retrieve the index item associated with this query term
-					
-					docFrequency = item.getDocFrequency();			// Retrieve the number of documents which contain this query term 
-					idf = (double) Math.log((totalDocCount + 0.5 - docFrequency) / (0.5 + docFrequency));
-					
-					docList = item.getDocList();					// Retrieve the list of documents which contain this query term
-					term = docList.get(document.getDocNo());
-					
-					if (term != null) {								// Check if this document contains this query term
-						
-						docTermFrequency = docList.get(document.getDocNo()).getFrequency(); // Retrieve the number of times this query term appears in this document
-						docLength = document.getDocLength();
-						
-						numerator = docTermFrequency * (k + 1);
-						denominator = docTermFrequency + k * (1 - b + b * docLength / averageDocLength);
-						
-						score += idf * (numerator / denominator);
-						
-					}
-					
-				} // No more query terms in this topic
-				
-				bm25score = new Score();
-				bm25score.setScoreBM25(score);
-				
-				document.getScores().put(topic.getTopicID(), bm25score);
-				unsorted.put(document, score);
-				
-				System.out.println(topic.getTopicID() + " " + document.getDocNo() + ": " + score);
-				
-			} // Finished processing all documents for this topic
-			
-			ArrayList<Entry<Document, Float>> result = new ArrayList<Entry<Document, Float>>(unsorted.entrySet());
-			
-			System.out.println("empty?" + result.isEmpty());
-			
-			// Sort the scores in descending order
-			Collections.sort(result, new Comparator<Entry<Document, Float>>() {
-
-				@Override
-				// Returns negative if o2 < o1 and vice versa
-				public int compare(Entry<Document, Float> o1, Entry<Document, Float> o2) {
-					return o2.getValue().compareTo(o1.getValue());
-				}
-				
-			});
-			
-			results.put(topic.getTopicID(), result);
-			
-		} // No more topics to process
-		
-		System.out.println(results.size());
+		this.getDocumentCollectionMetrics(documentCollection);
+		this.getResults(index, topicCollection, documentCollection);
 		
 	}
 
@@ -138,28 +39,114 @@ public class BM25Model extends Hashtable<Integer, Results> {
 		return instance;
 		
 	}
+	
+	private void getResults(InvertedIndex index, Hashtable<Integer, Topic> topicCollection, Hashtable<String, Document> documentCollection) {
 		
-	public void printResults() {
+		// For every topic, there is a ranking of all documents
+		// A ranking is a sorted ArrayList<Document, Float>
 		
-		Iterator<Integer> itrTopics = results.keySet().iterator();
-		ArrayList<Entry<Document, Float>> result;
+		Iterator<Entry<Integer, Topic>> itrTopics = topicCollection.entrySet().iterator();
 		
-		Iterator<Entry<Document, Float>> itrEntries;
-		Entry<Document, Float> entry;
+		while (itrTopics.hasNext()) {
+			
+			Hashtable<Document, Double> unsorted = new Hashtable<Document, Double>();
+			
+			Topic topic = itrTopics.next().getValue();
+			int topicID = topic.getTopicID();
+			
+			Iterator<Entry<String, Document>> itrDocuments = documentCollection.entrySet().iterator();
+			
+			while (itrDocuments.hasNext()) {
+				
+				Document document = itrDocuments.next().getValue();
+				Hashtable<Integer, Word> words = document.getWords();
+				
+				double score = 0;
+				
+				Iterator<Word> itrWords = topic.getTerms().iterator();
+				
+				while (itrWords.hasNext()) {
+					
+					Word word = itrWords.next();
+					int wordID = word.getID();
+					
+					if (words.containsKey(wordID)) {			// If document contains the word
+						
+						int wordFrequency = words.get(wordID).getFrequency();
+						long docLength = document.getDocLength();
+						
+						IndexItem item = index.get(wordID);
+						double idf = item.getIDF();
+						
+						double numerator = idf * wordFrequency * (k + 1);
+						double denominator = wordFrequency + (k * (1 - b + (b * docLength / averageDocLength)));
+						score += numerator / denominator;
+						
+					}
+					
+				} // no more words in this topic
+			
+				unsorted.put(document, score);
+				
+			} // finished all documents in collection
+			
+			ArrayList<Entry<Document, Double>> sorted = new ArrayList<Entry<Document, Double>>(unsorted.entrySet());
+			
+			// Sort the scores in descending order
+			Collections.sort(sorted, new Comparator<Entry<Document, Double>>() {
+
+				@Override
+				// Returns negative if o2 < o1 and vice versa
+				public int compare(Entry<Document, Double> o1, Entry<Document, Double> o2) {
+					return o2.getValue().compareTo(o1.getValue());
+				}
+				
+			});
+			
+			this.put(topicID, sorted);
+			
+		} // no more topics to process
+			
+	}
+	
+	private void getDocumentCollectionMetrics(Hashtable<String, Document> documentCollection) {
 		
+		Iterator<Entry<String, Document>> itrDocuments = documentCollection.entrySet().iterator();
+		
+		totalDocCount = documentCollection.size();
+		long totalDocLength = 0;
+		
+		while (itrDocuments.hasNext()) {
+			totalDocLength += itrDocuments.next().getValue().getDocLength();
+		}
+		
+		averageDocLength = totalDocLength / totalDocCount;
+		
+		System.out.println("length of all documents combined: " + totalDocLength);	// 6,480,612
+		System.out.println("average length of document: " + averageDocLength);		// 1,365
+
+	}
+	
+		
+	public void printResults() throws FileNotFoundException, UnsupportedEncodingException {
+		
+		Iterator<Integer> itrTopics = this.keySet().iterator();
+
 		String space = " ";
-		int topicID;
+		String newline = "\n";
 		
 		StringBuilder str = new StringBuilder();
 		
 		// Iterate over topics
 		while (itrTopics.hasNext()) {
 			
-			topicID = itrTopics.next();
-			result = results.get(topicID);
+			int topicID = itrTopics.next();
+			ArrayList<Entry<Document, Double>> result = this.get(topicID);
 			
 			for (int i = 0; i < result.size(); i++) {
-				entry = result.get(i);
+				
+				Entry<Document, Double> entry = result.get(i);
+				
 				str.append(String.valueOf(topicID));
 				str.append(space);
 				str.append(BM25Model.q0);
@@ -171,9 +158,15 @@ public class BM25Model extends Hashtable<Integer, Results> {
 				str.append(String.valueOf(entry.getValue()));
 				str.append(space);
 				str.append(BM25Model.bm25);
+				str.append(newline);
+				
 			}
 			
-			System.out.println(str.toString());
+			String path = Main.class.getClassLoader().getResource("data/").getPath();
+			PrintWriter printer = new PrintWriter(path + "BM25Model.txt", "UTF-8");
+			printer.print(str.toString());
+			printer.close();
+//			System.out.println(str.toString());
 			
 		}
 		

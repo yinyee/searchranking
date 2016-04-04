@@ -6,7 +6,7 @@ public class Document {
 	
 	private String docNo;
 	private long docLength;
-	private Hashtable<Integer, Term> terms;
+	private Hashtable<Integer, Word> words;
 	private Hashtable<Integer, Score> scores;
 	
 	public String getDocNo() {
@@ -17,14 +17,18 @@ public class Document {
 		return docLength;
 	}
 	
-	public Document(String docNo, long docLength, Hashtable<Integer, Term> terms) {
+	public Document(String docNo, long docLength, Hashtable<Integer, Word> words) {
 		this.docNo = docNo;
 		this.docLength = docLength;
-		this.terms = terms;
+		this.words = words;
 	}
 	
-	public Hashtable<Integer, Term> getTerms() {
-		return terms;
+	public Hashtable<Integer, Word> getWords() {
+		return words;
+	}
+	
+	public void setScores(Hashtable<Integer, Score> scores) {
+		this.scores = scores;
 	}
 	
 	public Hashtable<Integer, Score> getScores() {

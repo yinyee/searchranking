@@ -2,11 +2,12 @@ package ranking;
 
 public class Score {
 	
+	private int topicID;
 	private int rank_bm25, rank_mmr, rank_pd;
 	private float score_bm25, score_mmr, score_pd;
 	
-	public Score() {
-		
+	public Score(int topicID) {
+		this.topicID = topicID;
 	}
 	
 	public void setRankBM25(int rank) {
@@ -31,6 +32,10 @@ public class Score {
 
 	public void setScorePD(float score) {
 		this.score_pd = score;
+	}
+	
+	public int getTopicID() {
+		return topicID;
 	}
 	
 	public int getRankBM25() {

@@ -4,17 +4,18 @@ import java.util.Hashtable;
 
 public class IndexItem {
 	
-	private int termID, docFrequency;
-	private Hashtable<String, Term> docList;
+	private int wordID, docFrequency;
+	private double idf;
+	private Hashtable<String, Find> docList;
 	
-	public IndexItem(int termID, int docFrequency, Hashtable<String, Term> docList) {
-		this.termID = termID;
+	public IndexItem(int wordID, int docFrequency, Hashtable<String, Find> docList) {
+		this.wordID = wordID;
 		this.docFrequency = docFrequency;
 		this.docList = docList;
 	}
 	
-	public int getTermID() {
-		return termID;
+	public int getWordID() {
+		return wordID;
 	}
 	
 	public void setDocFrequency(int docFrequency) {
@@ -25,8 +26,15 @@ public class IndexItem {
 		return docFrequency;
 	}
 	
-	public Hashtable<String, Term> getDocList() {
+	public Hashtable<String, Find> getDocList() {
 		return docList;
 	}
+	
+	public void setIDF(double idf) {
+		this.idf = idf;
+	}
 
+	public double getIDF() {
+		return idf;
+	}
 }

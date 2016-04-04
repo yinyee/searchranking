@@ -5,9 +5,9 @@ import java.util.ArrayList;
 public class Topic {
 	
 	private int topicID;
-	private ArrayList<Term> terms;
+	private ArrayList<Word> terms;
 	
-	public Topic(int topicID, ArrayList<Term> terms) {
+	public Topic(int topicID, ArrayList<Word> terms) {
 		this.topicID = topicID;
 		this.terms = terms;
 	}
@@ -16,7 +16,7 @@ public class Topic {
 		return topicID;
 	}
 	
-	public ArrayList<Term> getTerms() {
+	public ArrayList<Word> getTerms() {
 		return terms;
 	}
 
