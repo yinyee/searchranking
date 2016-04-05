@@ -7,7 +7,19 @@ public class Document {
 	private String docNo;
 	private long docLength;
 	private Hashtable<Integer, Word> words;
-	private Hashtable<Integer, Score> scores;
+	private Hashtable<Integer, Integer> relevances;
+	
+	public Document(String docNo) {
+		this.docNo = docNo;
+		relevances = new Hashtable<Integer, Integer>();
+	}
+	
+	public Document(String docNo, long docLength, Hashtable<Integer, Word> words) {
+		this.docNo = docNo;
+		this.docLength = docLength;
+		this.words = words;
+		relevances = new Hashtable<Integer, Integer>();
+	}
 	
 	public String getDocNo() {
 		return docNo;
@@ -17,22 +29,12 @@ public class Document {
 		return docLength;
 	}
 	
-	public Document(String docNo, long docLength, Hashtable<Integer, Word> words) {
-		this.docNo = docNo;
-		this.docLength = docLength;
-		this.words = words;
-	}
-	
 	public Hashtable<Integer, Word> getWords() {
 		return words;
 	}
 	
-	public void setScores(Hashtable<Integer, Score> scores) {
-		this.scores = scores;
-	}
-	
-	public Hashtable<Integer, Score> getScores() {
-		return scores;
+	public Hashtable<Integer, Integer> getRelevances() {
+		return relevances;
 	}
 
 }

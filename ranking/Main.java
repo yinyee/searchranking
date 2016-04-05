@@ -3,10 +3,12 @@ package ranking;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.StringTokenizer;
 
 public class Main {
@@ -15,12 +17,13 @@ public class Main {
 	
 	public static void main (String[] args) {
 		
+		String path = Main.class.getClassLoader().getResource("data/").getPath();
+		
 		// PRE-PROCESS DOCUMENTS
 		Hashtable<String, Document> documentCollection = new Hashtable<String, Document>();
 		
 		try {
 			
-			String path = Main.class.getClassLoader().getResource("data/").getPath();
 			BufferedReader reader = new BufferedReader(new FileReader(path + "document_term_vectors.dat"));
 			
 			String line;
@@ -78,13 +81,6 @@ public class Main {
 			
 		}
 		
-//		Document test = documentCollection.get("clueweb12-0905wb-50-14578");
-//		System.out.println(test.getDocNo());
-//		System.out.println("length: " + test.getDocLength());
-//		System.out.println("id: " + test.getWords().get(448).getID());
-//		System.out.println("freq: " + test.getWords().get(448).getFrequency());
-//		System.out.println("freq: " + test.getWords().get(2).getFrequency());
-		
 //		System.out.println(documentCollection.size());
 		
 		// PRE-PROCESS QUERIES
@@ -92,7 +88,6 @@ public class Main {
 		
 		try {
 			
-			String path = Main.class.getClassLoader().getResource("data/").getPath();
 			BufferedReader reader = new BufferedReader(new FileReader(path + "query_term_vectors.dat"));
 			
 			String line;
@@ -142,26 +137,197 @@ public class Main {
 		// CREATE INVERTED INDEX
 		InvertedIndex index = InvertedIndex.getInstance(documentCollection, topicCollection);
 		
-//		Iterator<String> itr = index.get(503).getDocList().keySet().iterator();
-//		while (itr.hasNext()) {
-//			System.out.println(itr.next());
-//		}
-		
-		
 //		System.out.println(index.size());
 		
 		// CALCULATE BM25 SCORES
-		BM25Model bm25model = BM25Model.getInstance(index, topicCollection, documentCollection);
-		
+		BM25 myBM25 = new BM25();
 		try {
-			bm25model.printResults();
+			myBM25.getResults(index, topicCollection, documentCollection);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		
+		// PRE-PROCESS GIVEN BM25 SCORES
+		BM25 givenBM25 = new BM25();
 		
+		try {
+			
+			BufferedReader reader = new BufferedReader(new FileReader(path + "BM25b0.75_0.res"));
+			
+			String line;
+			
+			while ((line = reader.readLine()) != null) {
+				
+				StringTokenizer tokeniser = new StringTokenizer(line);
+				
+				while (tokeniser.hasMoreTokens()) {
+					
+					// Topic ID
+					String sTopicID = tokeniser.nextToken();
+					sTopicID = sTopicID.trim();
+					int topicID = Integer.parseInt(sTopicID);
+					
+					if (!(givenBM25.containsKey(topicID))) {
+						Hashtable<Integer, Result> results = new Hashtable<Integer, Result>();
+						givenBM25.put(topicID, results);
+					}
+
+					// Skip Q0
+					tokeniser.nextToken();
+					
+					// Document number
+					String docNo = tokeniser.nextToken();
+					docNo = docNo.trim();
+					
+					// Rank
+					String sRank = tokeniser.nextToken();
+					sRank = sRank.trim();
+					int rank = Integer.parseInt(sRank);
+					
+					// Score
+					String sScore = tokeniser.nextToken();
+					sScore = sScore.trim();
+					double score = Double.parseDouble(sScore);
+					
+					// Skip BM
+					tokeniser.nextToken();
+				
+					Hashtable<Integer, Result> results = givenBM25.get(topicID);
+					
+					Document document;
+					if (documentCollection.containsKey(docNo)) {
+						document = documentCollection.get(docNo);
+					} else {
+						document = new Document(docNo);
+						documentCollection.put(docNo, document);
+					}
+					
+					Result result = new Result(document, score, rank);
+					results.put(rank, result);
+					
+				}
+			}
+			
+			reader.close();
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 		
 		// PRE-PROCESS RELEVANCE JUDGEMENTS
+		try {
+			
+			BufferedReader reader = new BufferedReader(new FileReader(path + "adhoc.txt"));
+			
+			String line;
+			
+			while ((line = reader.readLine()) != null) {
+				
+				StringTokenizer tokeniser = new StringTokenizer(line);
+				
+				while (tokeniser.hasMoreTokens()) {
+					
+					// Topic ID
+					String sTopicID = tokeniser.nextToken();
+					sTopicID = sTopicID.trim();
+					int topicID = Integer.parseInt(sTopicID);
+					
+					Topic topic = topicCollection.get(topicID);
+					
+					// Skip topic intent
+					tokeniser.nextToken();
+					
+					// Document number
+					String docNo = tokeniser.nextToken();
+					docNo = docNo.trim();
+
+					Document document;
+					if (documentCollection.containsKey(docNo)) {
+						document = documentCollection.get(docNo);
+					} else {
+						document = new Document(docNo);
+						documentCollection.put(docNo, document);
+					}
+					
+					// Relevance judgment
+					String sRelevance = tokeniser.nextToken();
+					sRelevance = sRelevance.trim();
+					int relevance = Integer.parseInt(sRelevance);
+//					System.out.println("relevance: " + relevance);
+					
+					// Update document with relevance judgment
+					Hashtable<Integer, Integer> relevances = document.getRelevances();
+					relevances.put(topicID, relevance);
+					
+					// Update topic relevance counts
+					switch (relevance) {
+					case 2: {
+						int two = topic.getTwo();
+						topic.setTwo(two + 1);
+						break;
+					}
+					case 1: {
+						int one = topic.getOne();
+						topic.setOne(one + 1);
+						break;
+					}
+					}
+					
+				}		
+			}
+			
+			reader.close();
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		// OUTPUT NDCG at K
+		NDCG ndcg = new NDCG(givenBM25, topicCollection);
+		
+		StringBuilder str = new StringBuilder();
+		
+		String separator = "\t|\t";
+		
+		str.append("bm25\n");
+		str.append("K");
+		str.append(separator);
+		str.append("NDCG@K\n");
+		str.append(1);
+		str.append(separator);
+		str.append(String.format("%.3g%n", ndcg.atK(1)));
+		str.append(5);
+		str.append(separator);
+		str.append(String.format("%.3g%n", ndcg.atK(5)));
+		str.append(10);
+		str.append(separator);
+		str.append(String.format("%.3g%n", ndcg.atK(10)));
+		str.append(20);
+		str.append(separator);
+		str.append(String.format("%.3g%n", ndcg.atK(20)));
+		str.append(30);
+		str.append(separator);
+		str.append(String.format("%.3g%n", ndcg.atK(30)));
+		str.append(40);
+		str.append(separator);
+		str.append(String.format("%.3g%n", ndcg.atK(40)));
+		str.append(50);
+		str.append(separator);
+		str.append(String.format("%.3g%n", ndcg.atK(50)));
+
+		try {
+			
+			PrintWriter printer = new PrintWriter(path + "bm25_ndcg.txt", "UTF-8");
+			printer.print(str.toString());
+			printer.close();
+			
+		} catch (Exception e) {
+			
+			e.printStackTrace();
+			
+		}
+		
+		
 		// read qrels adhoc file
 		// create a Dictionary called IDCG with key = topicID
 		// for each topicID from QueryCollection, create an ArrayList called Unsorted

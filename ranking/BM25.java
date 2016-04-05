@@ -11,9 +11,7 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 
 @SuppressWarnings("serial")
-public class BM25Model extends Hashtable<Integer, ArrayList<Entry<Document, Double>>> {
-	
-	private static BM25Model instance = null;
+public class BM25 extends Hashtable<Integer, Hashtable<Integer, Result>> {
 	
 	private static final float b = 0.75f;
 	private static final float k = 1.5f;
@@ -21,29 +19,9 @@ public class BM25Model extends Hashtable<Integer, ArrayList<Entry<Document, Doub
 	private static final String q0 = "Q0";
 	private static final String bm25 = "BM25b0.75";
 	
-	private int totalDocCount;
-	private float averageDocLength;
-	
-	public BM25Model(InvertedIndex index, Hashtable<Integer, Topic> topicCollection, Hashtable<String, Document> documentCollection) {
+	public void getResults(InvertedIndex index, Hashtable<Integer, Topic> topicCollection, Hashtable<String, Document> documentCollection) throws FileNotFoundException, UnsupportedEncodingException {
 		
-		this.getDocumentCollectionMetrics(documentCollection);
-		this.getResults(index, topicCollection, documentCollection);
-		
-	}
-
-	public static BM25Model getInstance(InvertedIndex index, Hashtable<Integer, Topic> topicCollection, Hashtable<String, Document> documentCollection) {
-		
-		if (instance == null)
-			instance = new BM25Model(index, topicCollection, documentCollection);
-		
-		return instance;
-		
-	}
-	
-	private void getResults(InvertedIndex index, Hashtable<Integer, Topic> topicCollection, Hashtable<String, Document> documentCollection) {
-		
-		// For every topic, there is a ranking of all documents
-		// A ranking is a sorted ArrayList<Document, Float>
+		float averageDocLength = this.getAverageDocLength(documentCollection);
 		
 		Iterator<Entry<Integer, Topic>> itrTopics = topicCollection.entrySet().iterator();
 		
@@ -103,32 +81,50 @@ public class BM25Model extends Hashtable<Integer, ArrayList<Entry<Document, Doub
 				
 			});
 			
-			this.put(topicID, sorted);
+			Hashtable<Integer, Result> results = new Hashtable<Integer, Result>();
+			
+			for (int i = 0; i < sorted.size(); i++) {
+				
+				Entry<Document, Double> entry = sorted.get(i);
+				Document document = entry.getKey();
+				double score = entry.getValue();
+				
+				Result result = new Result(document, score, i);
+				
+				results.put(i, result);
+				
+			}
+			
+			this.put(topicID, results);
 			
 		} // no more topics to process
-			
+		
+		this.printResults();
+		
 	}
 	
-	private void getDocumentCollectionMetrics(Hashtable<String, Document> documentCollection) {
+	private float getAverageDocLength(Hashtable<String, Document> documentCollection) {
 		
 		Iterator<Entry<String, Document>> itrDocuments = documentCollection.entrySet().iterator();
 		
-		totalDocCount = documentCollection.size();
+		int totalDocCount = documentCollection.size();
 		long totalDocLength = 0;
 		
 		while (itrDocuments.hasNext()) {
 			totalDocLength += itrDocuments.next().getValue().getDocLength();
 		}
 		
-		averageDocLength = totalDocLength / totalDocCount;
+		float averageDocLength = totalDocLength / totalDocCount;
 		
-		System.out.println("length of all documents combined: " + totalDocLength);	// 6,480,612
-		System.out.println("average length of document: " + averageDocLength);		// 1,365
-
+//		System.out.println("length of all documents combined: " + totalDocLength);	// 6,480,612
+//		System.out.println("average length of document: " + averageDocLength);		// 1,365
+		
+		return averageDocLength;
+		
 	}
 	
 		
-	public void printResults() throws FileNotFoundException, UnsupportedEncodingException {
+	private void printResults() throws FileNotFoundException, UnsupportedEncodingException {
 		
 		Iterator<Integer> itrTopics = this.keySet().iterator();
 
@@ -141,23 +137,25 @@ public class BM25Model extends Hashtable<Integer, ArrayList<Entry<Document, Doub
 		while (itrTopics.hasNext()) {
 			
 			int topicID = itrTopics.next();
-			ArrayList<Entry<Document, Double>> result = this.get(topicID);
 			
-			for (int i = 0; i < result.size(); i++) {
+			Hashtable<Integer, Result> results = this.get(topicID);
+			Iterator<Entry<Integer, Result>> itrResults = results.entrySet().iterator();
+			
+			while (itrResults.hasNext()) {
 				
-				Entry<Document, Double> entry = result.get(i);
+				Entry<Integer, Result> entry = itrResults.next();
 				
 				str.append(String.valueOf(topicID));
 				str.append(space);
-				str.append(BM25Model.q0);
+				str.append(BM25.q0);
 				str.append(space);
-				str.append(entry.getKey().getDocNo());
+				str.append(entry.getValue().getDocument().getDocNo());
 				str.append(space);
-				str.append(String.valueOf(i));
+				str.append(entry.getKey());
 				str.append(space);
-				str.append(String.valueOf(entry.getValue()));
+				str.append(entry.getValue().getScore());
 				str.append(space);
-				str.append(BM25Model.bm25);
+				str.append(BM25.bm25);
 				str.append(newline);
 				
 			}
