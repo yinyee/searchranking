@@ -9,6 +9,7 @@ import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.StringTokenizer;
 
 public class Main {
@@ -326,33 +327,98 @@ public class Main {
 			e.printStackTrace();
 			
 		}
-		
-		
-		// read qrels adhoc file
-		// create a Dictionary called IDCG with key = topicID
-		// for each topicID from QueryCollection, create an ArrayList called Unsorted
-		// for each line,
-		//		use docNo to retrieve the document from DocumentCollection
-		//		if negative, adjust relevance
-		//		retrieve rank from document
-		//		compute partial dcg
-		// find max for Unsorted and compute IDCG
-		// add value = IDCG to IDCG
-		
-		// CALCULATE NORMALISED DISCOUNTED CUMULATIVE GAIN
-		// create a Dictionary called NDCG with key = topicID and value = null
-		// for each k, create an ArrayList called K
-		// create a Dictionary called NDCGK with key = k and value = K
-		// for each topicID from QueryCollection,
-		//		float idcg
-		// 		float cumulative
-		// 		for each rank from Results,
-		// 			retrieve document
-		//			retrieve partial dcg
-		//			compute ndcgscore
-		//			if rank = {k}, add ndcgscore to K
-		
+				
 		// CALCULATE COSINE SIMILARITY AND PEARSON'S COEFFICIENT
+		Iterator<Entry<String, Document>> itr1 = documentCollection.entrySet().iterator();
+		
+		while (itr1.hasNext()) {
+			
+			Entry<String, Document> entry = itr1.next();
+			Document doc1 = entry.getValue();
+			String docNo1 = doc1.getDocNo();
+			
+			Hashtable<Integer, Word> words1 = doc1.getWords();
+			double avg1 = doc1.getDocLength() / words1.size();
+			
+			Set<Entry<String, Document>> remaining = documentCollection.entrySet();
+			remaining.remove(entry);
+			
+			Iterator<Entry<String, Document>> itr2 = remaining.iterator();
+			
+			while (itr2.hasNext()) {
+				
+				Document doc2 = itr2.next().getValue();
+				String docNo2 = doc2.getDocNo();
+				
+				Hashtable<Integer, Word> words2 = doc2.getWords();
+				double avg2 = doc2.getDocLength() / words2.size();
+				
+				Iterator<Entry<Integer, Word>> itrWords = words1.entrySet().iterator();
+				
+				// Cosine
+				long product = 0;
+				long sqFreq1 = 0;
+				long sqFreq2 = 0;
+				
+				// Pearson
+				long productDiff = 0;
+				long squareDiff1 = 0;
+				long squareDiff2 = 0;
+				
+				while (itrWords.hasNext()) {
+					
+					Word word = itrWords.next().getValue();
+						
+					if (words2.contains(word)) {
+						
+						int wordID = word.getID();
+						
+						int freq1 = word.getFrequency();
+						int freq2 = words2.get(wordID).getFrequency();
+						
+						// Cosine
+						long prod = freq1 * freq2;
+						long sq1 = freq1 * freq1;
+						long sq2 = freq2 * freq2;
+						
+						product += prod;
+						sqFreq1 += sq1;
+						sqFreq2 += sq2;
+						
+						// Pearson
+						double diff1 = freq1 - avg1;
+						double diff2 = freq2 - avg2;
+						
+						double prodDiff = diff1 * diff2;
+						double sqDiff1 = diff1 * diff1;
+						double sqDiff2 = diff2 * diff2;
+						
+						productDiff += prodDiff;
+						squareDiff1 += sqDiff1;
+						squareDiff2 += sqDiff2;
+						
+					}
+					
+					double cosine = product / (Math.sqrt(sqFreq1) * Math.sqrt(sqFreq2));
+					double pearson = productDiff / (Math.sqrt(squareDiff1) * Math.sqrt(squareDiff2));
+					
+					Similarity similarity = new Similarity(docNo1, docNo2, cosine, pearson);
+					
+					Hashtable<String, Similarity> similarities = doc1.getSimilarities();
+					similarities.put(docNo2, similarity);
+					
+					similarities = doc2.getSimilarities();
+					similarities.put(docNo1, similarity);
+					
+				} // finished processing all words contained in doc1
+				
+				
+			}
+			
+		}
+		
+		
+		
 		// create a Dictionary called Similarities with key = doc_1 || doc_2
 		// for each pair of documents in DocumentCollection,
 		//		for each term in common,

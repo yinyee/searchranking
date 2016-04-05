@@ -8,10 +8,12 @@ public class Document {
 	private long docLength;
 	private Hashtable<Integer, Word> words;
 	private Hashtable<Integer, Integer> relevances;
+	private Hashtable<String, Similarity> similarities;
 	
 	public Document(String docNo) {
 		this.docNo = docNo;
 		relevances = new Hashtable<Integer, Integer>();
+		similarities = new Hashtable<String, Similarity>();
 	}
 	
 	public Document(String docNo, long docLength, Hashtable<Integer, Word> words) {
@@ -19,6 +21,7 @@ public class Document {
 		this.docLength = docLength;
 		this.words = words;
 		relevances = new Hashtable<Integer, Integer>();
+		similarities = new Hashtable<String, Similarity>();
 	}
 	
 	public String getDocNo() {
@@ -35,6 +38,10 @@ public class Document {
 	
 	public Hashtable<Integer, Integer> getRelevances() {
 		return relevances;
+	}
+	
+	public Hashtable<String, Similarity> getSimilarities() {
+		return similarities;
 	}
 
 }
