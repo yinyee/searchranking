@@ -14,15 +14,15 @@ import java.util.Iterator;
 import java.util.StringTokenizer;
 import java.util.Map.Entry;
 
-public class MMR {
-	
-	static String path = MMR.class.getClassLoader().getResource("data/").getPath();
+public class PortfolioScoring {
 
+	static String path = PortfolioScoring.class.getClassLoader().getResource("data/").getPath();
+	
 	private Hashtable<Integer, String[][]> input = new Hashtable<Integer, String[][]>();
 	private Hashtable<Integer, ArrayList<String>> results;
 	private DocumentCollection documentCollection;
 	
-	public MMR(String file, DocumentCollection documentCollection) {
+	public PortfolioScoring(String file, DocumentCollection documentCollection) {
 		
 		this.documentCollection = documentCollection;
 		
@@ -94,7 +94,7 @@ public class MMR {
 			String sHighestScore = ranking[0][1];
 			double highestScore = Double.parseDouble(sHighestScore);
 			
-			double[][] cosines = getCosineSimilarity(ranking);
+			double[][] cosines = getPearsonCoefficients(ranking);
 			
 			ArrayList<String> result = new ArrayList<String>();
 			ArrayList<Integer> indices = new ArrayList<Integer>();
@@ -163,9 +163,11 @@ public class MMR {
 		
 	}
 	
-	private double[][] getCosineSimilarity(String[][] ranking) {
+	private double[][] getPearsonCoefficients(String[][] ranking) {
 		
-		double[][] cosines = new double[100][100];
+		double avgWordFrequency = 3.069912065746759;
+		
+		double[][] pearsons = new double[100][100];
 		
 		for (int i = 0; i < 100; i++) {
 			
@@ -210,19 +212,19 @@ public class MMR {
 				
 				double denominator = sumSq1 * sumSq2;
 				
-				double cosine = 0;
+				double pearson = 0;
 				
 				if (denominator != 0) {
-					cosine = product / denominator;
+					pearson = product / denominator;
 				}
 				
-				cosines[i][j] = cosine;
+				pearsons[i][j] = pearson;
 				
 			} // no more document 2
 			
 		} // no more document 1
 
-		return cosines;
+		return pearsons;
 		
 	}
 	

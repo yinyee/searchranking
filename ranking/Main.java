@@ -2,6 +2,8 @@ package ranking;
 
 import java.io.FileNotFoundException;
 import java.io.UnsupportedEncodingException;
+import java.util.Hashtable;
+import java.util.Iterator;
 
 public class Main {
 	
@@ -20,15 +22,9 @@ public class Main {
 //		BM25 givenBM25 = new BM25("BM25b0.75_0.res", documentCollection);
 //		calculateNDCG(givenBM25, ks, "bm25_ndcg.txt");
 		
-		try {
-			calculateSimilarities(documentCollection);
-		} catch (FileNotFoundException | UnsupportedEncodingException e) {
-			e.printStackTrace();
-		}
-		
-//		Document document = documentCollection.get("clueweb12-0905wb-50-14578");
-//		System.out.println(document.getSimilarities().get("clueweb12-1700tw-22-12689").getCosine());
-//		System.out.println(document.getSimilarities().get("clueweb12-1700tw-22-12689").getPearson());
+//		MMR mmr = new MMR("top100.txt", documentCollection);
+//		mmr.getRankings(0.25);
+//		mmr.getRankings(0.5);
 		
 		// CALCULATE MAXIMUM MARGINAL RELEVANCE AND PORTFOLIO DIVERSITY
 		// for each topicID from BM25,
@@ -78,13 +74,6 @@ public class Main {
 		
 		NDCG ndcg = new NDCG(bm25, topicCollection);
 		ndcg.outputToFile(ks, file);
-		
-	}
-	
-	static void calculateSimilarities(DocumentCollection documentCollection) throws FileNotFoundException, UnsupportedEncodingException {
-		
-		Diversity diversity = new Diversity("top100.txt", documentCollection);
-		diversity.calculateDiversity();
 		
 	}
 
