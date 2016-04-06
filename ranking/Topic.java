@@ -6,7 +6,7 @@ public class Topic {
 	
 	private int topicID;
 	private ArrayList<Word> terms;
-	private int zero, one, two;
+	private int zero, one, two, three, four;
 	
 	public Topic(int topicID, ArrayList<Word> terms) {
 		this.topicID = topicID;
@@ -33,6 +33,14 @@ public class Topic {
 		this.two = two;
 	}
 	
+	public void setThree(int three) {
+		this.three = three;
+	}
+	
+	public void setFour(int four) {
+		this.four = four;
+	}
+	
 	public int getZero() {
 		return zero;
 	}
@@ -43,6 +51,14 @@ public class Topic {
 	
 	public int getTwo() {
 		return two;
+	}
+	
+	public int getThree() {
+		return three;
+	}
+	
+	public int getFour() {
+		return four;
 	}
 
 }

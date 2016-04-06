@@ -21,6 +21,5 @@ public class Similarity {
 	public double getPearson() {
 		return pearson;
 	}
-	
 
 }

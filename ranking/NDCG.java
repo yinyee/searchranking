@@ -1,34 +1,21 @@
 package ranking;
 
+import java.io.PrintWriter;
 import java.util.Hashtable;
 import java.util.Iterator;
 
-/**
- * Discounted Cumulative Gain, DCG(k) = rel(1) + sum_{i=2}^{k} frac { rel(i) / log_2 (i) }
- * where	i		= position
- * 			rel(i)	= relevance of result at position i
- * 
- * Normalised DCG, NDCG(k) = DCG(k) / IDCG(k)
- * where	IDCG(k)	= the DCG(k) for the ideal ranking
- * 			ideal ranking	=  ranking sorted by relevance
- * 
- * Output format:
- * 		model
- * e.g.	k	|	NDCG(k)
- * 		1	|	0.45
- * 		5	| 	0.56
- * 
- * @author yinyee
- *
- */
 public class NDCG {
+	
+	static String path = NDCG.class.getClassLoader().getResource("data/").getPath();
 	
 	private BM25 bm25;
 	private Hashtable<Integer, Topic> topicCollection;
 	
 	public NDCG(BM25 bm25, Hashtable<Integer, Topic> topicCollection) {
+		
 		this.bm25 = bm25;
 		this.topicCollection = topicCollection;
+		
 	}
 	
 	public double atK(int position) {
@@ -44,12 +31,23 @@ public class NDCG {
 			Hashtable<Integer, Result> results = bm25.get(topicID);
 			
 			double dcg = 0;
+
+			Result result = results.get(0);
+			Document document = result.getDocument();
+			Hashtable<Integer, Integer> relevances = document.getRelevances();
 			
-			for (int i = 0; i < position; i++) {
+			int relevanceAt0;
+			if (relevances.containsKey(topicID)) {
+				relevanceAt0 = relevances.get(topicID);
+			} else {
+				relevanceAt0 = 0;
+			}
+			
+			for (int i = 1; i < position; i++) {
 				
-				Result result = results.get(i);
-				Document document = result.getDocument();
-				Hashtable<Integer, Integer> relevances = document.getRelevances();
+				result = results.get(i);
+				document = result.getDocument();
+				relevances = document.getRelevances();
 				
 				int relevance;
 				
@@ -59,12 +57,13 @@ public class NDCG {
 					relevance = 0;
 				}
 				
-				double numerator = Math.pow(2, relevance) - 1;
-				double denominator = Math.log10(i + 2) / Math.log10(2);
+				double denominator = Math.log10(i + 1) / Math.log10(2); 
 				
-				dcg += numerator / denominator;
+				dcg += relevance / denominator;
 				
 			}
+			
+			dcg += relevanceAt0;
 			
 			Topic topic = topicCollection.get(topicID);
 			
@@ -82,16 +81,42 @@ public class NDCG {
 	
 	private double idcgAtK(Topic topic, int position) {
 		
+		int numberOfFours = topic.getFour();
+		int numberOfThrees = topic.getThree();
 		int numberOfTwos = topic.getTwo();
 		int numberOfOnes = topic.getOne();
 		
 		double idcg = 0;
 		
-		for (int i = 0; i < position; i++) {
+		int relevanceAt0;
+		
+		if (numberOfFours > 0) {
+			relevanceAt0 = 4;
+			numberOfFours--;
+		} else if (numberOfThrees > 0) {
+			relevanceAt0 = 3;
+			numberOfThrees--;
+		} else if (numberOfTwos > 0) {
+			relevanceAt0 = 2;
+			numberOfTwos--;
+		} else if (numberOfOnes > 0) {
+			relevanceAt0 = 1;
+			numberOfOnes--;
+		} else {
+			relevanceAt0 = 0;
+		}
+		
+		for (int i = 1; i < position; i++) {
 			
 			int relevance;
 			
-			if (numberOfTwos > 0) {
+			if (numberOfFours > 0) {
+				relevance = 4;
+				numberOfFours--;
+			} else if (numberOfThrees > 0) {
+				relevance = 3;
+				numberOfThrees--;
+			} else if (numberOfTwos > 0) {
 				relevance = 2;
 				numberOfTwos--;
 			} else if (numberOfOnes > 0) {
@@ -101,15 +126,48 @@ public class NDCG {
 				relevance = 0;
 			}
 			
-			double numerator = Math.pow(2, relevance);
-			double denominator = Math.log10(i + 2) / Math.log10(2);
+			double denominator = Math.log10(i + 1) / Math.log10(2);
 			
-			idcg += numerator / denominator;
+			idcg += relevance / denominator;
 			
 		}
 		
+		idcg += relevanceAt0;
+		
 		return idcg;
 		
+	}
+	
+	public void outputToFile(int[] ks, String file) {
+		
+		
+		StringBuilder str = new StringBuilder();
+		
+		String separator = "\t|\t";
+		
+		str.append("bm25\n");
+		str.append("K");
+		str.append(separator);
+		str.append("NDCG@K\n");
+		
+		for (int i = 0; i < ks.length; i++) {
+			str.append(ks[i]);
+			str.append(separator);
+			str.append(String.format("%.3g%n", atK(ks[i])));
+		}
+
+		try {
+			
+			PrintWriter printer = new PrintWriter(path + file, "UTF-8");
+			printer.print(str.toString());
+			printer.close();
+			
+		} catch (Exception e) {
+			
+			e.printStackTrace();
+			
+		}
+
 	}
 
 
