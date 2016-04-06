@@ -1,10 +1,5 @@
 package ranking;
 
-import java.io.FileNotFoundException;
-import java.io.UnsupportedEncodingException;
-import java.util.Hashtable;
-import java.util.Iterator;
-
 public class Main {
 	
 	static double averageDocLength;
@@ -26,25 +21,10 @@ public class Main {
 //		mmr.getRankings(0.25);
 //		mmr.getRankings(0.5);
 		
-		// CALCULATE MAXIMUM MARGINAL RELEVANCE AND PORTFOLIO DIVERSITY
-		// for each topicID from BM25,
-		//		retrieve BM25Results
-		// 		create a Dictionary called MMRResults with key = rank and value = null
-		//		create a Dictionary called PDResults with key = rank and value = null
-		//		create a Dictionary called UnsortedMMR
-		//		create a Dictionary called UnsortedPD
-		//		add top-ranked result from BM25Results to MMRResults
-		//		add top-ranked result from BM25Results to PDResults
-		//		for each document in BM25Results,
-		//			retrieve cosine similarity with documents in MMRResults
-		//			retrieve Pearson's coefficient with documents in PDResults
-		//			find max cosine similarity and compute mmrscore
-		//			add key = mmrscore and value = Document object to UnsortedMMR
-		//			compute pdscore
-		//			add key = pdscore and value = Document object to UnsortedPD
-		//		find max from UnsortedMMR and add to MMRResults
-		//		find max from UnsortedPD and add to PDRresults
-		
+//		PortfolioScoring portfolio = new PortfolioScoring("top100.txt", documentCollection);
+//		portfolio.getRankings(4);
+//		portfolio.getRankings(-4);
+				
 		System.out.println("Run time: " + ((System.currentTimeMillis() - startTime) / 1000));
 		
 	}

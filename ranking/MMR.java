@@ -217,6 +217,7 @@ public class MMR {
 				}
 				
 				cosines[i][j] = cosine;
+				cosines[j][i] = cosine;
 				
 			} // no more document 2
 			
@@ -256,6 +257,9 @@ public class MMR {
 				str.append(result.get(j));
 				str.append(space);
 				str.append(j);
+				str.append(space);
+				str.append("MMR");
+				str.append(lambda);
 				str.append(newline);
 				
 			}

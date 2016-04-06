@@ -79,7 +79,7 @@ public class PortfolioScoring {
 		
 	}
 	
-	public void getRankings(double lambda) {
+	public void getRankings(double b) {
 		
 		results = new Hashtable<Integer, ArrayList<String>>();
 		
@@ -94,7 +94,7 @@ public class PortfolioScoring {
 			String sHighestScore = ranking[0][1];
 			double highestScore = Double.parseDouble(sHighestScore);
 			
-			double[][] cosines = getPearsonCoefficients(ranking);
+			double[][] pearsons = getPearsonCoefficients(ranking);
 			
 			ArrayList<String> result = new ArrayList<String>();
 			ArrayList<Integer> indices = new ArrayList<Integer>();
@@ -104,28 +104,23 @@ public class PortfolioScoring {
 			
 			while (result.size() < 100) {
 			
-				double maxMMRScore = 0;
+				double maxPortfolioScore = -1000;
 				int maxIndex = 0;
 				
 				for (int k = 1; k < 100; k++) {
 					
 					if (!(indices.contains(k))) {	// if this document is not in the result set
 					
-						double maxCosine = 0;
+						double sumWeightedPearsons = 0;
 						
 						for (int i = 0; i < indices.size(); i++) {		// check against every document in the result set
 							
 							int index = indices.get(i);
-			
-							// look in row
-							if (cosines[index][k] > maxCosine) {
-								maxCosine = cosines[index][k];
-							}
 							
-							// look in column
-							if (cosines[k][index] > maxCosine) {
-								maxCosine = cosines[k][index];
-							}
+							double weight = 1 / Math.pow(2, i);
+							double pearson = pearsons[index][k];
+							
+							sumWeightedPearsons += (weight * pearson);
 							
 						} // finished checking against all documents in the result set
 						
@@ -133,10 +128,12 @@ public class PortfolioScoring {
 						double bm25Score = Double.parseDouble(sScore);
 						bm25Score = bm25Score / highestScore;		// need to normalise the score
 						
-						double mmrScore = (lambda * bm25Score) - ((1 - lambda) * maxCosine);
+						double currentWeight = 1 / Math.pow(2, indices.size());
 						
-						if (mmrScore > maxMMRScore) {
-							maxMMRScore = mmrScore;
+						double portfolioScore = bm25Score - (b * (currentWeight + (2 * sumWeightedPearsons)));
+						
+						if (portfolioScore > maxPortfolioScore) {
+							maxPortfolioScore = portfolioScore;
 							maxIndex = k;
 						}
 						
@@ -156,7 +153,7 @@ public class PortfolioScoring {
 		
 		
 		try {
-			outputToFile(results, lambda);
+			outputToFile(results, b);
 		} catch (FileNotFoundException | UnsupportedEncodingException e) {
 			e.printStackTrace();
 		}
@@ -164,8 +161,6 @@ public class PortfolioScoring {
 	}
 	
 	private double[][] getPearsonCoefficients(String[][] ranking) {
-		
-		double avgWordFrequency = 3.069912065746759;
 		
 		double[][] pearsons = new double[100][100];
 		
@@ -177,12 +172,16 @@ public class PortfolioScoring {
 			Hashtable<Integer, Word> words1 = doc1.getWords();
 			Iterator<Entry<Integer, Word>> itrWords = words1.entrySet().iterator();
 			
+			double avg1 = doc1.getDocLength() / words1.size();
+			
 			for (int j = i + 1; j < 100; j++) {
 				
 				String docNo2 = ranking[j][0];
 				Document doc2 = documentCollection.get(docNo2);
 				
 				Hashtable<Integer, Word> words2 = doc2.getWords();
+				
+				double avg2 = doc2.getDocLength() / words2.size();
 				
 				long product = 0;
 				long sumSq1 = 0;
@@ -197,9 +196,12 @@ public class PortfolioScoring {
 						int freq1 = words1.get(wordID).getFrequency();
 						int freq2 = words2.get(wordID).getFrequency();
 						
-						long prod = freq1 * freq2;
-						long sq1 = freq1 * freq1;
-						long sq2 = freq2 * freq2;
+						double diff1 = freq1 - avg1;
+						double diff2 = freq2 - avg2;
+						
+						double prod = diff1 * diff2;
+						double sq1 = diff1 * diff1;
+						double sq2 = diff2 * diff2;
 						
 						product += prod;
 						sumSq1 += sq1;
@@ -219,6 +221,7 @@ public class PortfolioScoring {
 				}
 				
 				pearsons[i][j] = pearson;
+				pearsons[j][i] = pearson;
 				
 			} // no more document 2
 			
@@ -228,7 +231,7 @@ public class PortfolioScoring {
 		
 	}
 	
-	private void outputToFile(Hashtable<Integer, ArrayList<String>> results, double lambda) throws FileNotFoundException, UnsupportedEncodingException {
+	private void outputToFile(Hashtable<Integer, ArrayList<String>> results, double b) throws FileNotFoundException, UnsupportedEncodingException {
 		
 		StringBuilder str = new StringBuilder();
 		
@@ -258,13 +261,16 @@ public class PortfolioScoring {
 				str.append(result.get(j));
 				str.append(space);
 				str.append(j);
+				str.append(space);
+				str.append("Portfolio");
+				str.append(b);
 				str.append(newline);
 				
 			}
 			
 		}
 		
-		PrintWriter printer = new PrintWriter(path + "MMRScoring" + lambda, "UTF-8");
+		PrintWriter printer = new PrintWriter(path + "PortfolioScoring" + b, "UTF-8");
 		printer.print(str.toString());
 		printer.close();
 		
