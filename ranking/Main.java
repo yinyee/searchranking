@@ -9,7 +9,7 @@ public class Main {
 		long startTime = System.currentTimeMillis();
 
 		DocumentCollection documentCollection = new DocumentCollection("document_term_vectors.dat");
-//		int[] ks = {1, 5, 10, 20, 30, 40, 50};
+		int[] ks = {1, 5, 10, 20, 30, 40, 50};
 //		
 //		BM25 myBM25 = calculateBM25(documentCollection);
 //		calculateNDCG(myBM25, ks, "myBM25_ndcg.txt");
@@ -24,7 +24,10 @@ public class Main {
 //		PortfolioScoring portfolio = new PortfolioScoring("top100.txt", documentCollection);
 //		portfolio.getRankings(4);
 //		portfolio.getRankings(-4);
-				
+		
+		double[] alphas = {0.1, 0.5, 0.9};
+		calculateAlphaNDCG(documentCollection, ks, alphas, "MMRScoring0.25");
+		
 		System.out.println("Run time: " + ((System.currentTimeMillis() - startTime) / 1000));
 		
 	}
@@ -54,6 +57,15 @@ public class Main {
 		
 		NDCG ndcg = new NDCG(bm25, topicCollection);
 		ndcg.outputToFile(ks, file);
+		
+	}
+	
+	static void calculateAlphaNDCG(DocumentCollection documentCollection, int[] ks, double[] alphas, String file) {
+		
+		SubtopicCollection subtopicCollection = new SubtopicCollection("ndeval.txt", documentCollection);
+		
+		AlphaNDCG alphaNDCG = new AlphaNDCG(file, documentCollection, subtopicCollection);
+		alphaNDCG.outputToFile(ks, alphas, file);
 		
 	}
 

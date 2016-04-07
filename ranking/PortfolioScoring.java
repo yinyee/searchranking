@@ -118,6 +118,7 @@ public class PortfolioScoring {
 							int index = indices.get(i);
 							
 							double weight = 1 / Math.pow(2, i);
+//							double weight = 1 / (i + 1);
 							double pearson = pearsons[index][k];
 							
 							sumWeightedPearsons += (weight * pearson);
@@ -129,6 +130,7 @@ public class PortfolioScoring {
 						bm25Score = bm25Score / highestScore;		// need to normalise the score
 						
 						double currentWeight = 1 / Math.pow(2, indices.size());
+//						double currentWeight = 1 / (indices.size() + 1);
 						
 						double portfolioScore = bm25Score - (b * (currentWeight + (2 * sumWeightedPearsons)));
 						
