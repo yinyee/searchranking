@@ -4,10 +4,8 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Hashtable;
 import java.util.Iterator;
-import java.util.Map.Entry;
 import java.util.StringTokenizer;
 
 public class AlphaNDCG {
@@ -101,6 +99,8 @@ public class AlphaNDCG {
 					
 					ArrayList<Integer> subtopics = subtopicCollection.get(topicID);
 					
+					int count = 0;
+					
 					for (int j = 0; j < subtopics.size(); j++) { // iterate through subtopics in this topic
 						
 						int subtopicID = subtopics.get(j);
@@ -108,7 +108,6 @@ public class AlphaNDCG {
 						if (novelty.containsKey(subtopicID)) {
 							
 							int judgement = novelty.get(subtopicID);
-							int count = 0;
 							
 							if (judgement != 0) {
 													
@@ -139,12 +138,10 @@ public class AlphaNDCG {
 					} // finished processing all the subtopics in this topic
 					
 					gain.add(gainAtPosition);
-					System.out.println(topicID + " " + i + " " + gainAtPosition);
 					
 				} else {
 					
 					gain.add(0.00);
-					System.out.println(topicID + " " + i + " 0.0");
 					
 				}
 				
@@ -158,45 +155,171 @@ public class AlphaNDCG {
 		
 	}
 	
-	private double atK(Hashtable<Integer, ArrayList<Double>> gains, int position) {
+	private Hashtable<Integer, ArrayList<Double>> calculateIdealGains(double alpha) {
 		
-		Iterator<Entry<Integer, ArrayList<Double>>> itrTopics = gains.entrySet().iterator();
+		Hashtable<Integer, ArrayList<Double>> idealGains = new Hashtable<Integer, ArrayList<Double>>(); 
+		
+		Iterator<Integer> itrTopics = results.keySet().iterator();
+		
+		while (itrTopics.hasNext()) {  // For each topic
+			
+			int topicID = itrTopics.next();
+			
+			ArrayList<String> documents = results.get(topicID);
+			
+			int maxJudgement = -1;
+			String maxDocument = "";
+			
+			// Get the highest scoring document
+			for (int i = 0; i < documents.size(); i++) {  // For each document in the ranking
+				
+				String docNo = documents.get(i);
+				Document document = documentCollection.get(docNo);
+				
+				Hashtable<Integer, Hashtable<Integer, Integer>> novelties = document.getNovelties();
+				
+				int judgement = 0;
+				
+				if (novelties.containsKey(topicID)) {
+					
+					Hashtable<Integer, Integer> novelty = novelties.get(topicID);
+					
+					Iterator<Integer> itrSubtopics = novelty.keySet().iterator();
+					
+					while (itrSubtopics.hasNext()) {
+						
+						judgement += novelty.get(itrSubtopics.next());
+						
+					} // finished iterating through all the subtopics
+					
+				} // no need to check if document is not relevant at all to the topic
+				
+				if (judgement > maxJudgement) {
+					maxJudgement = judgement;
+					maxDocument = docNo;
+				}
+				
+			} // finished checking all documents
+			
+			ArrayList<Double> idealGain = new ArrayList<Double>();
+			idealGain.add( (double) maxJudgement);
+
+			ArrayList<String> newRanking = new ArrayList<String>();
+			newRanking.add(maxDocument);
+
+			// At this point we have added the first document
+			// We now need to add the rest in order
+			
+			while (newRanking.size() < documents.size()) {	// make sure to reorder all the documents in ranking
+				
+				double maxGain = 0;
+				
+				for (int i = 0; i < documents.size(); i++) {
+					
+					String docNo = documents.get(i);
+					
+					if (!(newRanking.contains(docNo))) { 	// if document is NOT YET added to the new ranking
+						
+						Document document = documentCollection.get(docNo);
+						Hashtable<Integer, Hashtable<Integer, Integer>> novelties = document.getNovelties();
+						
+						if (novelties.containsKey(topicID)) {	// if this document has judgements for this topic
+							
+							Hashtable<Integer, Integer> novelty = novelties.get(topicID);							
+							Iterator<Integer> itrSubtopics = novelty.keySet().iterator();
+							
+							double gain = 0;
+							
+							while (itrSubtopics.hasNext()) {	// for every subtopic in this topic
+								
+								int subtopicID = itrSubtopics.next();
+								
+								if (novelty.containsKey(subtopicID)) {	// if non-zero judgement for this subtopic for this document
+									
+									int count = 0;
+									
+									for (int j = 0; j < newRanking.size(); j++) {	// check the documents which have already been chosen
+										
+										String previousDocNo = newRanking.get(j);
+										Document previousDocument = documentCollection.get(previousDocNo);
+										
+										Hashtable<Integer, Hashtable<Integer, Integer>> previousNovelties = previousDocument.getNovelties();
+										Hashtable<Integer, Integer> previousNovelty = previousNovelties.get(topicID);
+										
+										if (previousNovelty.containsKey(subtopicID)) {
+											count++;
+										}	// count how many times this subtopic has been covered by documents which have already been chosen
+										
+									}	// finished checking the documents which have already been chosen
+									
+									gain += novelty.get(subtopicID) * Math.pow(1 - alpha, count);
+									
+								} // no need to calculate gain if this document does not have a novelty judgement for this subtopic
+								
+							} // finished adding up gains for all subtopics in topic
+									
+							if (gain > maxGain) { // update max values
+								
+								maxGain = gain;
+								maxDocument = docNo;
+								
+							}  
+							
+						} // no need to check if document is not relevant at all to the topic 
+						
+					} // no need to check if document is already in the new ranking
+					
+				} // finished processing all documents
+				
+				idealGain.add(maxGain);
+				newRanking.add(maxDocument);
+
+			} // finished reordering all documents in ranking
+			
+			idealGains.put(topicID, idealGain);
+			
+		} // finished processing all topics
+		
+		return idealGains;
+		
+	}
+	
+	private double atK(Hashtable<Integer, ArrayList<Double>> gains, Hashtable<Integer, ArrayList<Double>> idealGains, int position) {
+		
+		Iterator<Integer> itrTopics = gains.keySet().iterator();
 		
 		double ndcg = 0;
+		int count = 0;	// keep count of how many topics have at least one non-zero novelty judgement
 		
 		while (itrTopics.hasNext()) {
 			
-			Entry<Integer, ArrayList<Double>> entry = itrTopics.next();
+			int topicID = itrTopics.next();
 			
-			ArrayList<Double> gain = entry.getValue();
-			
-//			System.out.println(gain.size());
+			ArrayList<Double> gain = gains.get(topicID);
+			ArrayList<Double> idealGain = idealGains.get(topicID);
 			
 			double dcg = 0;
-			
-			for (int i = 0; i < position; i++) {
-				
-				dcg += gain.get(i) / (Math.log10(i + 2) / Math.log10(2));
-				
-			}
-			
-			Collections.sort(gain);
-			
 			double idcg = 0;
 			
-			for (int i = 0; i < position; i++) {
+			for (int i = 0; i < position; i++) {	// sum up gains to get cumulative gains
 				
-				idcg += gain.get(i) / (Math.log10(i + 2) / Math.log10(2));
+				double denominator = Math.log10(i + 2) / Math.log10(2);
+				
+				dcg += gain.get(i) / denominator;
+				idcg += idealGain.get(i) / denominator;
 				
 			}
 			
-			ndcg += dcg / idcg;
+			if (idcg != 0) {
+				ndcg += dcg / idcg;
+				count++;
+			}
 			
-		}
+		} // finished processing all topics
 		
-		double ndcgK = ndcg / gains.size();
+		ndcg = ndcg / count;
 		
-		return ndcgK;
+		return ndcg;
 		
 	}
 	
@@ -205,12 +328,17 @@ public class AlphaNDCG {
 		for (int i = 0; i < alphas.length; i++) {
 			
 			Hashtable<Integer, ArrayList<Double>> gains = calculateGains(alphas[i]);
+			Hashtable<Integer, ArrayList<Double>> idealGains = calculateIdealGains(alphas[i]);
 			
 			StringBuilder str = new StringBuilder();
 			
-			String separator = "\t\t|\t";
+			String separator = "\t|\t";
 			
 			str.append(file);
+			str.append("\n");
+			str.append("alpha = ");
+			str.append(alphas[i]);
+			str.append("\n");
 			str.append("K");
 			str.append("\t|\t");
 			str.append("Alpha NDCG@K\n");
@@ -219,13 +347,13 @@ public class AlphaNDCG {
 				
 				str.append(ks[j]);
 				str.append(separator);
-				str.append(String.format("%.3g%n", atK(gains, ks[j])));
+				str.append(String.format("%.3g%n", atK(gains, idealGains, ks[j])));
 				
 			}
 			
 			try {
 				
-				PrintWriter printer = new PrintWriter(path + file + "_alphaNDCG" + alphas[i], "UTF-8");
+				PrintWriter printer = new PrintWriter(path + file + "_alphaNDCG_" + alphas[i], "UTF-8");
 				printer.print(str.toString());
 				printer.close();
 				

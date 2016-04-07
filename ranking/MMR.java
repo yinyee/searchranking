@@ -266,7 +266,7 @@ public class MMR {
 			
 		}
 		
-		PrintWriter printer = new PrintWriter(path + "MMRScoring" + lambda, "UTF-8");
+		PrintWriter printer = new PrintWriter(path + "MMRScoring_" + lambda, "UTF-8");
 		printer.print(str.toString());
 		printer.close();
 		

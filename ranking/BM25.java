@@ -277,7 +277,7 @@ public class BM25 extends Hashtable<Integer, Hashtable<Integer, Result>> {
 			
 		}
 		
-		PrintWriter printer = new PrintWriter(path + "BM25Model.txt", "UTF-8");
+		PrintWriter printer = new PrintWriter(path + "BM25Model", "UTF-8");
 		printer.print(str.toString());
 		printer.close();
 //		System.out.println(str.toString());

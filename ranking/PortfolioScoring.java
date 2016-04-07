@@ -272,7 +272,7 @@ public class PortfolioScoring {
 			
 		}
 		
-		PrintWriter printer = new PrintWriter(path + "PortfolioScoring" + b, "UTF-8");
+		PrintWriter printer = new PrintWriter(path + "PortfolioScoring_" + b, "UTF-8");
 		printer.print(str.toString());
 		printer.close();
 		
